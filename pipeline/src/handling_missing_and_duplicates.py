@@ -3,19 +3,22 @@ import pandas as pd
 from abc import ABC, abstractmethod
 
 # -------------------------------------------------------------------
-# Logging configuration
+# Logging Configuration
 # -------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levelname)s - %(name)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
 
 # -------------------------------------------------------------------
-# Abstract base handler
+# Abstract Base Handler
 # -------------------------------------------------------------------
 class DataFrameHandler(ABC):
+    """
+    Interface for all data transformation components.
+    """
     @abstractmethod
     def handle(self, df: pd.DataFrame) -> pd.DataFrame:
         """Process and return a pandas DataFrame"""
@@ -23,26 +26,32 @@ class DataFrameHandler(ABC):
 
 
 # -------------------------------------------------------------------
-# Concrete handler: missing values & duplicates
+# Concrete Handler: Missing Values & Duplicates
 # -------------------------------------------------------------------
 class MissingAndDuplicateHandler(DataFrameHandler):
+    """
+    Handles basic data cleaning by removing null values and duplicate records.
+    """
     def handle(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Drops missing values and duplicate rows from the DataFrame.
+        """
         try:
             rows_before = len(df)
-            logger.info(f"Starting data cleaning. Rows before: {rows_before}")
+            logger.info(f"🧹 Starting data cleaning process | Initial rows: {rows_before}")
 
-            # Drop missing values
+            # Step 1: Drop missing values
             df = df.dropna()
-
-            # Drop duplicate rows
+            
+            # Step 2: Drop duplicate rows
             df = df.drop_duplicates()
 
             rows_after = len(df)
-            logger.info(f"Data cleaning completed. Rows after: {rows_after}")
-            logger.info(f"Rows removed: {rows_before - rows_after}")
+            logger.info(f"✨ Data cleaning completed | Final rows: {rows_after}")
+            logger.info(f"✅ Summary: Removed {rows_before - rows_after} rows in total.")
 
             return df
 
         except Exception as e:
-            logger.exception("Error occurred while handling missing values and duplicates")
+            logger.error(f"❌ Error during missing/duplicate handling: {e}")
             raise e

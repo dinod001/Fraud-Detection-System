@@ -1,18 +1,13 @@
 import logging
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
+import joblib
 from sklearn.model_selection import KFold
 from abc import ABC, abstractmethod
+from typing import List, Dict, Any
 
 # -------------------------------------------------------------------
-# Settings
-# -------------------------------------------------------------------
-pd.set_option('display.max_columns', None)
-tqdm.pandas()
-
-# -------------------------------------------------------------------
-# Logging
+# Logging Configuration
 # -------------------------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
@@ -22,9 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 # -------------------------------------------------------------------
-# Abstract base handler
+# Abstract Base Handler
 # -------------------------------------------------------------------
 class DataFrameHandler(ABC):
+    """
+    Interface for all data transformation components.
+    """
     @abstractmethod
     def handle(self, df: pd.DataFrame) -> pd.DataFrame:
         pass
@@ -34,18 +32,27 @@ class DataFrameHandler(ABC):
 # Feature Engineering Utilities
 # -------------------------------------------------------------------
 class FeatureEngineer:
-    """Collection of feature engineering utilities"""
+    """
+    Collection of methods for creating domain-specific fraud features.
+    Now supports persistence for target encoding mappings.
+    """
 
-    # ---------------------------------------------------------------
-    # Create time-based behavioral features
-    # ---------------------------------------------------------------
-    # - Measures account age at purchase time
-    # - Extracts hour and weekday from transaction timestamp
-    # - Flags night-time and weekend transactions
-    # ---------------------------------------------------------------
+    def __init__(self):
+        # Stores category -> fraud_rate mappings for inference
+        self.encoder_mappings: Dict[str, Dict[str, float]] = {}
+        # Stores global mean fraud rate as a fallback for new categories
+        self.global_mean: float = 0.0
+
     @staticmethod
     def create_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Creates time-based features: account age, purchase hour, weekday, weekend/night flags.
+        """
+        logger.info("🕒 Creating temporal behavioral features...")
         df = df.copy()
+        
+        df['signup_time'] = pd.to_datetime(df['signup_time'])
+        df['purchase_time'] = pd.to_datetime(df['purchase_time'])
 
         df['account_age_minutes'] = (
             df['purchase_time'] - df['signup_time']
@@ -61,15 +68,12 @@ class FeatureEngineer:
 
         return df
 
-    # ---------------------------------------------------------------
-    # Map IP addresses to country using IP ranges
-    # ---------------------------------------------------------------
-    # - Converts IP to numeric format
-    # - Performs fast range-based lookup using merge_asof
-    # - Ensures IP falls within upper/lower bounds
-    # ---------------------------------------------------------------
     @staticmethod
     def map_ip_to_country(df: pd.DataFrame, ip_df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Maps IP addresses to countries using range-based lookup.
+        """
+        logger.info("🌍 Mapping IP addresses to country origins...")
         df = df.copy()
         ip_df = ip_df.sort_values('lower_bound_ip_address')
 
@@ -90,15 +94,12 @@ class FeatureEngineer:
 
         return df_merged
 
-    # ---------------------------------------------------------------
-    # Create velocity and device-level behavior features
-    # ---------------------------------------------------------------
-    # - Counts total transactions per device
-    # - Flags first-time usage of a device
-    # - Helps identify device reuse across accounts
-    # ---------------------------------------------------------------
     @staticmethod
     def create_velocity_features(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Creates velocity features based on device interaction patterns.
+        """
+        logger.info("🚀 Calculating device transaction velocity and age...")
         df = df.sort_values('purchase_time')
 
         df['device_txn_count_total'] = (
@@ -111,15 +112,12 @@ class FeatureEngineer:
 
         return df
 
-    # ---------------------------------------------------------------
-    # Create transaction amount anomaly features
-    # ---------------------------------------------------------------
-    # - Log-transform purchase value for normalization
-    # - Computes global Z-score
-    # - Flags extreme transaction amounts
-    # ---------------------------------------------------------------
     @staticmethod
     def create_amount_features(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Creates financial features: log-transforms and outlier detection for purchase value.
+        """
+        logger.info("💰 Normalizing and analyzing transaction amounts...")
         df['purchase_value_log'] = np.log1p(df['purchase_value'])
 
         mean_val = df['purchase_value'].mean()
@@ -135,94 +133,151 @@ class FeatureEngineer:
 
         return df
 
-    # ---------------------------------------------------------------
-    # Target encoding with K-Fold leakage prevention
-    # ---------------------------------------------------------------
-    # - Encodes categorical feature using fraud rate
-    # - Uses K-Fold strategy to avoid target leakage
-    # - Applies smoothing for rare categories
-    # ---------------------------------------------------------------
-    @staticmethod
     def target_encode_kfold(
+        self,
         df: pd.DataFrame,
         col: str,
         target: str = 'class',
         n_folds: int = 5,
         smoothing: int = 10
     ) -> pd.DataFrame:
+        """
+        Performs target encoding with K-Fold during training.
+        Also calculates global mappings for inference preservation.
+        """
+        logger.info(f"🏷️ [TRAIN] Target encoding categorical feature: {col}")
         df = df.copy()
         kf = KFold(n_splits=n_folds, shuffle=True, random_state=42)
 
         encoded_col = f"{col}_fraud_rate"
         df[encoded_col] = 0.0
 
-        global_mean = df[target].mean()
-
+        # Store global stats for this column for inference mappings
+        self.global_mean = df[target].mean()
+        
+        # 1. K-Fold encoding (for training consistency/leakage prevention)
         for train_idx, val_idx in kf.split(df):
             train_data = df.iloc[train_idx]
-
             agg = train_data.groupby(col)[target].agg(['count', 'mean'])
             smooth = (
-                agg['count'] * agg['mean'] + smoothing * global_mean
+                agg['count'] * agg['mean'] + smoothing * self.global_mean
             ) / (agg['count'] + smoothing)
 
             df.loc[df.index[val_idx], encoded_col] = (
                 df.loc[df.index[val_idx], col].map(smooth)
             )
 
-        df[encoded_col] = df[encoded_col].fillna(global_mean)
+        # 2. Store final global mapping for this column (used in inference)
+        agg_all = df.groupby(col)[target].agg(['count', 'mean'])
+        smooth_all = (
+            agg_all['count'] * agg_all['mean'] + smoothing * self.global_mean
+        ) / (agg_all['count'] + smoothing)
+        
+        self.encoder_mappings[col] = smooth_all.to_dict()
+
+        df[encoded_col] = df[encoded_col].fillna(self.global_mean)
         return df
 
-    # ---------------------------------------------------------------
-    # Final cleanup before model training
-    # ---------------------------------------------------------------
-    # - Removes identifiers and high-cardinality columns
-    # - Drops raw timestamps and PII-like fields
-    # ---------------------------------------------------------------
+    def apply_inference_encoding(self, df: pd.DataFrame, col: str) -> pd.DataFrame:
+        """
+        Applies learned encoding mappings during inference (no target column needed).
+        """
+        logger.info(f"🏷️ [INFERENCE] Applying target encoding mapping: {col}")
+        df = df.copy()
+        encoded_col = f"{col}_fraud_rate"
+        
+        mapping = self.encoder_mappings.get(col, {})
+        
+        # Map values, fill unknown categories with global mean
+        df[encoded_col] = df[col].map(mapping).fillna(self.global_mean)
+        
+        return df
+
+    def save_encodings(self, path: str):
+        """
+        Persists mappings and global mean to disk.
+        """
+        logger.info(f"💾 Saving target encoding mappings to: {path}")
+        payload = {
+            'mappings': self.encoder_mappings,
+            'global_mean': self.global_mean
+        }
+        joblib.dump(payload, path)
+
+    def load_encodings(self, path: str):
+        """
+        Loads mappings and global mean from disk.
+        """
+        logger.info(f"📂 Loading target encoding mappings from: {path}")
+        payload = joblib.load(path)
+        self.encoder_mappings = payload.get('mappings', {})
+        self.global_mean = payload.get('global_mean', 0.0)
+
     @staticmethod
-    def cleanup(df: pd.DataFrame) -> pd.DataFrame:
-        drop_cols = [
-            'user_id', 'signup_time', 'purchase_time', 'device_id',
-            'ip_address', 'ip_address_int',
-            'lower_bound_ip_address', 'upper_bound_ip_address',
-            'browser', 'source', 'country', 'sex'
-        ]
-        return df.drop(columns=drop_cols, errors='ignore')
+    def cleanup(df: pd.DataFrame, drop_columns: List[str]) -> pd.DataFrame:
+        """
+        Removes raw, high-cardinality, or identifier columns.
+        """
+        logger.info("🧹 Removing raw identifiers and high-cardinality metadata...")
+        return df.drop(columns=drop_columns, errors='ignore')
 
 
 # -------------------------------------------------------------------
 # Feature Engineering Pipeline Handler
 # -------------------------------------------------------------------
 class FeatureEngineeringHandler(DataFrameHandler):
-    def __init__(self, ip_df: pd.DataFrame):
+    """
+    Orchestrates the full feature engineering suite.
+    """
+    def __init__(self, ip_df: pd.DataFrame, columns: List[str], drop_columns: List[str], 
+                 encoding_path: str = None, inference_mode: bool = False):
         self.ip_df = ip_df
+        self.columns = columns
+        self.drop_columns = drop_columns
+        self.encoding_path = encoding_path
+        self.inference_mode = inference_mode
         self.fe = FeatureEngineer()
+        
+        # If in inference mode, load pre-saved mappings
+        if self.inference_mode and self.encoding_path:
+            self.fe.load_encodings(self.encoding_path)
 
     def handle(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Executes all feature engineering steps in the prescribed order.
+        """
         try:
             rows_before = len(df)
-            logger.info(f"Starting feature engineering | rows={rows_before}")
+            mode_str = "INFERENCE" if self.inference_mode else "TRAINING"
+            logger.info(f"🛠️ Starting feature engineering suite [{mode_str}] | Initial rows: {rows_before}")
 
+            # Execute sequence
             df = self.fe.create_temporal_features(df)
             df = self.fe.map_ip_to_country(df, self.ip_df)
             df = self.fe.create_velocity_features(df)
             df = self.fe.create_amount_features(df)
             
-            # Target encode key categories
-            for col in ['browser', 'source', 'country']:
-                df = self.fe.target_encode_kfold(df, col=col)
+            # Application of Target Encoding
+            for col in self.columns:
+                if self.inference_mode:
+                    df = self.fe.apply_inference_encoding(df, col=col)
+                else:
+                    df = self.fe.target_encode_kfold(df, col=col)
+            
+            # Save mappings after training
+            if not self.inference_mode and self.encoding_path:
+                self.fe.save_encodings(self.encoding_path)
                 
-            df = self.fe.cleanup(df)
+            # Dynamic Cleanup based on config
+            df = self.fe.cleanup(df, self.drop_columns)
 
-            # Fix: .shape is a tuple, not a callable
             rows_after, columns_after = df.shape
             logger.info(
-                f"Feature engineering completed | rows={rows_after} | columns={columns_after} "
-                f"removed={rows_before - rows_after}"
+                f"✅ Feature engineering complete | Final Shape: ({rows_after}, {columns_after})"
             )
 
             return df
 
         except Exception as e:
-            logger.exception("Feature engineering failed")
+            logger.error(f"❌ Feature engineering pipeline failed: {e}")
             raise e

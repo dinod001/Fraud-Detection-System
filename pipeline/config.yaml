@@ -1,0 +1,84 @@
+data_paths:
+  raw_fraud_data: "data/raw/Fraud_Data.csv"
+  raw_ip_country: "data/raw/IpAddress_to_Country.csv"
+  processed_data: "data/processed/feature_engineered.csv"
+  artifacts_dir: "artifacts"
+  model_artifacts_dir: "artifacts/models"
+  scaler_artifacts: "artifacts/scaler/scaler.joblib"
+  target_encoding_artifacts: "artifacts/encodings/target_mappings.joblib"
+  X_train: "artifacts/X_train.csv"
+  X_test: "artifacts/X_test.csv"
+  y_train: "artifacts/y_train.csv"
+  y_test: "artifacts/y_test.csv"
+
+columns:
+  target: "class"
+  drop_columns:
+    - "user_id"
+    - "signup_time"
+    - "purchase_time"
+    - "device_id"
+    - "ip_address"
+    - "ip_address_int"
+    - "lower_bound_ip_address"
+    - "upper_bound_ip_address"
+    - "browser"
+    - "source"
+    - "country"
+    - "sex"
+  categorical_columns:
+    - "browser"
+    - "source"
+    - "country"
+  features_to_scale:
+    - "purchase_value"
+    - "age"
+    - "account_age_minutes"
+    - "purchase_hour"
+    - "purchase_day_of_week"
+    - "is_weekend"
+    - "is_night"
+    - "device_txn_count_total"
+    - "is_device_new"
+    - "purchase_value_log"
+    - "purchase_value_zscore"
+    - "is_outlier_amount"
+    - "browser_fraud_rate"
+    - "source_fraud_rate"
+    - "country_fraud_rate"
+
+business_cost:
+  false_negative_cost: 100
+  false_positive_cost: 5
+
+training:
+  random_state: 42
+  test_size: 0.2
+  cv_folds: 3
+
+models:
+  xgboost:
+    best_params:
+      learning_rate: 0.1
+      max_depth: 8
+      n_estimators: 200
+    optimal_threshold: 0.38
+    model_path: "artifacts/models/xgb_tuned_model.joblib"
+  
+  random_forest:
+    best_params:
+      max_depth: null
+      min_samples_split: 2
+      n_estimators: 100
+    optimal_threshold: 0.09
+    model_path: "artifacts/models/rf_tuned_model.joblib"
+
+mlflow:
+  tracking_uri: "file:./mlruns"
+  experiment_name: "Fraud Detection System"
+  autolog: true
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "fraud_pipeline.log"
