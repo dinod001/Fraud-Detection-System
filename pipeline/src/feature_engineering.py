@@ -42,6 +42,9 @@ class FeatureEngineer:
         self.encoder_mappings: Dict[str, Dict[str, float]] = {}
         # Stores global mean fraud rate as a fallback for new categories
         self.global_mean: float = 0.0
+        # Stores amount stats for persistent z-scoring
+        self.amount_mean: float = 0.0
+        self.amount_std: float = 1.0
 
     @staticmethod
     def create_temporal_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -112,16 +115,25 @@ class FeatureEngineer:
 
         return df
 
-    @staticmethod
-    def create_amount_features(df: pd.DataFrame) -> pd.DataFrame:
+    def create_amount_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Creates financial features: log-transforms and outlier detection for purchase value.
+        Uses stored global stats during inference to avoid NaN issues on single rows.
         """
         logger.info("💰 Normalizing and analyzing transaction amounts...")
+        df = df.copy()
         df['purchase_value_log'] = np.log1p(df['purchase_value'])
 
-        mean_val = df['purchase_value'].mean()
-        std_val = df['purchase_value'].std()
+        # Use local stats for training, stored stats for inference
+        if len(df) > 1:
+            mean_val = df['purchase_value'].mean()
+            std_val = df['purchase_value'].std()
+            # Update internal state if training (optional, but good for consistency)
+            self.amount_mean = mean_val
+            self.amount_std = std_val if std_val > 0 else 1.0
+        else:
+            mean_val = self.amount_mean
+            std_val = self.amount_std
 
         df['purchase_value_zscore'] = (
             (df['purchase_value'] - mean_val) / std_val
@@ -195,23 +207,28 @@ class FeatureEngineer:
 
     def save_encodings(self, path: str):
         """
-        Persists mappings and global mean to disk.
+        Persists mappings and global stats to disk.
         """
-        logger.info(f"💾 Saving target encoding mappings to: {path}")
+        logger.info(f"💾 Saving feature engineering artifacts to: {path}")
         payload = {
             'mappings': self.encoder_mappings,
-            'global_mean': self.global_mean
+            'global_mean': self.global_mean,
+            'amount_mean': self.amount_mean,
+            'amount_std': self.amount_std
         }
         joblib.dump(payload, path)
 
     def load_encodings(self, path: str):
         """
-        Loads mappings and global mean from disk.
+        Loads mappings and global stats from disk.
         """
-        logger.info(f"📂 Loading target encoding mappings from: {path}")
+        logger.info(f"📂 Loading feature engineering artifacts from: {path}")
         payload = joblib.load(path)
         self.encoder_mappings = payload.get('mappings', {})
         self.global_mean = payload.get('global_mean', 0.0)
+        self.amount_mean = payload.get('amount_mean', 0.0)
+        self.amount_std = payload.get('amount_std', 1.0)
+        logger.info(f"✨ Loaded Stats -> Amount Mean: {self.amount_mean:.2f} | Std: {self.amount_std:.2f}")
 
     @staticmethod
     def cleanup(df: pd.DataFrame, drop_columns: List[str]) -> pd.DataFrame:
