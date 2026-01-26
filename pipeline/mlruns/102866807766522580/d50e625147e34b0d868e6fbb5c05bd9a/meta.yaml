@@ -1,0 +1,14 @@
+artifact_uri: file:///E:/my career life/Machine learning/Project/Fraud Detection/pipeline/mlruns/102866807766522580/d50e625147e34b0d868e6fbb5c05bd9a/artifacts
+end_time: 1769434964801
+entry_point_name: ''
+experiment_id: '102866807766522580'
+lifecycle_stage: active
+run_id: d50e625147e34b0d868e6fbb5c05bd9a
+run_name: enthused-kit-796
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1769434851483
+status: 3
+tags: []
+user_id: dinod

@@ -75,8 +75,15 @@ models:
     model_path: "artifacts/models/xgb_final_model.joblib"
 
 mlflow:
-  tracking_uri: "file:./mlruns"
+  tracking_uri: "file:./mlruns"  # Local file-based tracking
   experiment_name: "Fraud Detection System"
+  model_registry_name: "Fraud_Detection"
+  artifact_path: "model"
+  run_name_prefix: "fraud_run"
+  tags:
+    project: "Fraud Detection System"
+    team: "ml_engineering"
+    environment: "development"
   autolog: true
 
 logging:

@@ -1,0 +1,14 @@
+artifact_uri: file:///E:/my career life/Machine learning/Project/Fraud Detection/pipeline/mlruns/102866807766522580/7d719f58d6414a13915c7146eef7c14a/artifacts
+end_time: 1769435765001
+entry_point_name: ''
+experiment_id: '102866807766522580'
+lifecycle_stage: active
+run_id: 7d719f58d6414a13915c7146eef7c14a
+run_name: bald-colt-845
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1769435683329
+status: 3
+tags: []
+user_id: dinod

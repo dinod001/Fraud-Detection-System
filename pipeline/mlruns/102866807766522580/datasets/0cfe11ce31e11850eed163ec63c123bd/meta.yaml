@@ -1,0 +1,18 @@
+digest: 4bbed264
+name: dataset
+profile: '{"num_rows": 120889, "num_elements": 1813335}'
+schema: '{"mlflow_colspec": [{"type": "double", "name": "purchase_value", "required":
+  true}, {"type": "double", "name": "age", "required": true}, {"type": "double", "name":
+  "account_age_minutes", "required": true}, {"type": "double", "name": "purchase_hour",
+  "required": true}, {"type": "double", "name": "purchase_day_of_week", "required":
+  true}, {"type": "double", "name": "is_weekend", "required": true}, {"type": "double",
+  "name": "is_night", "required": true}, {"type": "double", "name": "device_txn_count_total",
+  "required": true}, {"type": "double", "name": "is_device_new", "required": true},
+  {"type": "double", "name": "purchase_value_log", "required": true}, {"type": "double",
+  "name": "purchase_value_zscore", "required": true}, {"type": "double", "name": "is_outlier_amount",
+  "required": true}, {"type": "double", "name": "browser_fraud_rate", "required":
+  true}, {"type": "double", "name": "source_fraud_rate", "required": true}, {"type":
+  "double", "name": "country_fraud_rate", "required": true}]}'
+source: '{"tags": {"mlflow.user": "dinod", "mlflow.source.name": "pipelines/training_pipeline.py",
+  "mlflow.source.type": "LOCAL", "mlflow.source.git.commit": "c651b28e26e4b08360d40ac75e0be1f1f5133e9f"}}'
+source_type: code

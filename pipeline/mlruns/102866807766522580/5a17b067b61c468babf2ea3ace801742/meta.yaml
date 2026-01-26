@@ -1,0 +1,14 @@
+artifact_uri: file:///E:/my career life/Machine learning/Project/Fraud Detection/pipeline/mlruns/102866807766522580/5a17b067b61c468babf2ea3ace801742/artifacts
+end_time: 1769434697682
+entry_point_name: ''
+experiment_id: '102866807766522580'
+lifecycle_stage: active
+run_id: 5a17b067b61c468babf2ea3ace801742
+run_name: data pipeline | 2026-01-26 19:07:58
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1769434685896
+status: 3
+tags: []
+user_id: dinod

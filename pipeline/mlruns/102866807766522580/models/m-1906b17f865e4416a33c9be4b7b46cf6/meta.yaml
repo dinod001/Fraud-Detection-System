@@ -1,0 +1,10 @@
+artifact_location: file:///E:/my career life/Machine learning/Project/Fraud Detection/pipeline/mlruns/102866807766522580/models/m-1906b17f865e4416a33c9be4b7b46cf6/artifacts
+creation_timestamp: 1769435775994
+experiment_id: '102866807766522580'
+last_updated_timestamp: 1769435783656
+model_id: m-1906b17f865e4416a33c9be4b7b46cf6
+model_type: null
+name: model
+source_run_id: b9f1a9c51de54086b9bc67b1a4cb1fe0
+status: 2
+status_message: null

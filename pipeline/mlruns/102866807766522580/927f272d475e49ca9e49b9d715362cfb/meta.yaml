@@ -1,0 +1,14 @@
+artifact_uri: file:///E:/my career life/Machine learning/Project/Fraud Detection/pipeline/mlruns/102866807766522580/927f272d475e49ca9e49b9d715362cfb/artifacts
+end_time: 1769434964801
+entry_point_name: ''
+experiment_id: '102866807766522580'
+lifecycle_stage: active
+run_id: 927f272d475e49ca9e49b9d715362cfb
+run_name: rebellious-bat-426
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1769434851483
+status: 3
+tags: []
+user_id: dinod

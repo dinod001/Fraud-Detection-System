@@ -1,0 +1,39 @@
+artifact_path: file:///E:/my career life/Machine learning/Project/Fraud Detection/pipeline/mlruns/102866807766522580/models/m-137cec2085ff49479e9f5ba03f02814f/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.10.0
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.7.2
+is_signature_from_type_hint: false
+mlflow_version: 3.8.1
+model_id: m-137cec2085ff49479e9f5ba03f02814f
+model_size_bytes: 1764668
+model_uuid: m-137cec2085ff49479e9f5ba03f02814f
+prompts: null
+run_id: b9f1a9c51de54086b9bc67b1a4cb1fe0
+signature:
+  inputs: '[{"type": "double", "name": "purchase_value", "required": true}, {"type":
+    "double", "name": "age", "required": true}, {"type": "double", "name": "account_age_minutes",
+    "required": true}, {"type": "double", "name": "purchase_hour", "required": true},
+    {"type": "double", "name": "purchase_day_of_week", "required": true}, {"type":
+    "double", "name": "is_weekend", "required": true}, {"type": "double", "name":
+    "is_night", "required": true}, {"type": "double", "name": "device_txn_count_total",
+    "required": true}, {"type": "double", "name": "is_device_new", "required": true},
+    {"type": "double", "name": "purchase_value_log", "required": true}, {"type": "double",
+    "name": "purchase_value_zscore", "required": true}, {"type": "double", "name":
+    "is_outlier_amount", "required": true}, {"type": "double", "name": "browser_fraud_rate",
+    "required": true}, {"type": "double", "name": "source_fraud_rate", "required":
+    true}, {"type": "double", "name": "country_fraud_rate", "required": true}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "int64", "shape": [-1]}}]'
+  params: null
+type_hint_from_example: false
+utc_time_created: '2026-01-26 13:55:57.716256'

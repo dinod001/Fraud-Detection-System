@@ -1,0 +1,14 @@
+artifact_uri: file:///E:/my career life/Machine learning/Project/Fraud Detection/pipeline/mlruns/102866807766522580/ae47f9c403f3444c85df7fe201c62f26/artifacts
+end_time: 1769434964801
+entry_point_name: ''
+experiment_id: '102866807766522580'
+lifecycle_stage: active
+run_id: ae47f9c403f3444c85df7fe201c62f26
+run_name: powerful-frog-585
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1769434851483
+status: 3
+tags: []
+user_id: dinod

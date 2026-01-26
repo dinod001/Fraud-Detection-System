@@ -1,0 +1,14 @@
+artifact_uri: file:///E:/my career life/Machine learning/Project/Fraud Detection/pipeline/mlruns/102866807766522580/6a5e1d7c5e1d49529a16cebaa1bcfc28/artifacts
+end_time: 1769435765001
+entry_point_name: ''
+experiment_id: '102866807766522580'
+lifecycle_stage: active
+run_id: 6a5e1d7c5e1d49529a16cebaa1bcfc28
+run_name: secretive-bug-889
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1769435683329
+status: 3
+tags: []
+user_id: dinod

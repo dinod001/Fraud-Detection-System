@@ -13,7 +13,8 @@ from src.data_ingestion import DataIngestorCSV
 from src.handling_missing_and_duplicates import MissingAndDuplicateHandler
 from src.feature_engineering import FeatureEngineeringHandler
 from src.feature_splitting_and_scaling import FeatureSplittingAndScalingHandler
-from utils.config import get_data_paths, get_column_config
+from utils.config import get_data_paths, get_column_config,get_training_config
+from utils.mlflow_utils import MLflowTracker
 
 # -------------------------------------------------------------------
 # Logging Configuration
@@ -36,6 +37,22 @@ class DataPipeline:
     def __init__(self):
         self.data_paths = get_data_paths()
         self.columns = get_column_config()
+        self.training = get_training_config()
+
+         # Mlflow setup
+        self.mlflow_tracker = MLflowTracker()
+        self.mlflow_tracker.setup_mlflow_autolog()
+        run_tags = self.mlflow_tracker.create_mlflow_run_tags(
+            'data_pipeline',
+            {
+                'data_path': self.data_paths['raw_fraud_data'],
+                'columns':  str(self.columns),
+                'scaling_config': "StandardScaler",
+                'splitting_config':  str(self.training)
+            }
+        )
+
+        self.mlflow_tracker.start_run(run_name="data_pipeline",tags=run_tags)
 
     def run(self):
         """
@@ -46,20 +63,26 @@ class DataPipeline:
             logger.info("🚀 Starting the Fraud Detection Data Pipeline...")
             logger.info("="*60)
 
-            # --- STEP 1: Data Ingestion ---
+            # ───────────────────────────────────────────────────────────────────────────
+            # STEP 01: Data Ingestion 
+            # ───────────────────────────────────────────────────────────────────────────
             logger.info("\n" + "-"*60)
             logger.info("📡 [Step 1/5] Ingesting raw datasets...")
             ingestor = DataIngestorCSV()
             df_raw = ingestor.ingest(self.data_paths['raw_fraud_data'])
             df_ip = ingestor.ingest(self.data_paths['raw_ip_country'])
 
-            # --- STEP 2: Data Cleaning ---
+            # ───────────────────────────────────────────────────────────────────────────
+            # STEP 02: Data Cleaning 
+            # ───────────────────────────────────────────────────────────────────────────
             logger.info("\n" + "-"*60)
             logger.info("🧹 [Step 2/5] Handling missing values and duplicates...")
             cleaning_handler = MissingAndDuplicateHandler()
             df_cleaned = cleaning_handler.handle(df_raw)
 
-            # --- STEP 3: Feature Engineering ---
+            # ───────────────────────────────────────────────────────────────────────────
+            # STEP 03: Feature Engineering
+            # ───────────────────────────────────────────────────────────────────────────
             logger.info("\n" + "-"*60)
             logger.info("🛠️ [Step 3/5] Engineering domain-specific features...")
             
@@ -77,7 +100,9 @@ class DataPipeline:
             )
             df_features = fe_handler.handle(df_cleaned)
 
-            # --- STEP 4: Splitting and Scaling ---
+            # ───────────────────────────────────────────────────────────────────────────
+            # STEP 04: Splitting and Scaling
+            # ───────────────────────────────────────────────────────────────────────────
             logger.info("\n" + "-"*60)
             logger.info("✂️ [Step 4/5] Splitting data and applying Z-score scaling...")
             scaling_splitter = FeatureSplittingAndScalingHandler(
@@ -87,7 +112,9 @@ class DataPipeline:
             )
             X_train, y_train, X_test, y_test = scaling_splitter.handle(df_features)
 
-            # --- STEP 5: Artifact Preservation ---
+            # ───────────────────────────────────────────────────────────────────────────
+            # STEP 05: Artifcats Saving
+            # ───────────────────────────────────────────────────────────────────────────
             logger.info("\n" + "-"*60)
             logger.info("💾 [Step 5/5] Saving processed artifacts to disk...")
             
@@ -104,9 +131,22 @@ class DataPipeline:
             logger.info(f"📍 Artifacts available in: {self.data_paths['artifacts_dir']}")
             logger.info("="*60)
 
+            #mlflow logging
+            self.mlflow_tracker.log_data_pipeline_metrics(
+                dataset_info={
+                    'total_rows': len(df_raw),
+                    'train_rows': len(X_train),
+                    'num_features': X_train.shape[1],
+                    'fraud_ratio': y_train.mean(), 
+                    'test_size': self.training.get('test_size'),
+                }
+            )
+
         except Exception as e:
             logger.error(f"💥 Pipeline crashed during execution: {e}")
             raise e
+        finally:
+            self.mlflow_tracker.end_run()
 
 
 # -------------------------------------------------------------------
