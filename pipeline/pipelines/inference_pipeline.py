@@ -131,7 +131,7 @@ def run_inference_demo():
 
         # 3. Initialize Inference Engine
         inference_engine = ModelInference(
-            model_path=model_config.get('model_path', 'artifacts/models/xgb_tuned_model.joblib'),
+            model_path=model_config.get('model_path', 'artifacts/models/fraud_detection.joblib'),
             scaler_path=data_paths['scaler_artifacts'],
             encoding_path=data_paths['target_encoding_artifacts'],
             categorical_cols=col_config.get('categorical_columns', []),

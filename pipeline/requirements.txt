@@ -49,12 +49,4 @@ flake8>=5.0.0
 # Optional: OpenAI for advanced imputation (if needed)
 joblib>=1.2.0,<2.0.0
 
-# Optional: Additional ML libraries
-# catboost>=1.1.0
-# optuna>=3.0.0
-
-# System dependencies (for some ML libraries)
-# Note: These might need to be installed via system package manager
-# libgomp1 (for OpenMP support)
-# libblas-dev
-# liblapack-dev 
+confluent-kafka>=2.0.0

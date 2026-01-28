@@ -24,8 +24,10 @@ class ModelInference:
     """
     Handles end-to-end inference: Preprocessing, Scaling, and Prediction.
     """
-    def __init__(self, model_path: str, scaler_path: str, encoding_path: str, 
-                 categorical_cols: list, drop_cols: list):
+    def __init__(self) -> None:
+        pass
+    def __init__(self, model_path: str = None, scaler_path: str = None, encoding_path: str = None, 
+                 categorical_cols: list = None, drop_cols: list = None):
         """
         Loads all required artifacts for inference.
         """

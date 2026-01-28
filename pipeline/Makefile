@@ -10,6 +10,11 @@ PYTHON = $(shell if [ -d .venv ]; then echo "uv run python"; else echo "python";
 VENV = .venv/bin/activate
 MLFLOW_PORT ?= 5001
 
+# Kafka Config
+KAFKA_CONF ?= kafka/server.properties
+PID_DIR ?= runtime/pids
+KAFKA_HOME ?= /opt/kafka
+
 # Default target
 all: help
 
@@ -40,6 +45,18 @@ help:
 	@echo "  make airflow-start       - Start Airflow"
 	@echo "  make airflow-kill        - Kill Airflow processes"
 	@echo "  make airflow-reset       - Reset Airflow database"
+	@echo ""
+	@echo "Kafka Commands:"
+	@echo "  make kafka-validate      - Validate Kafka installation"
+	@echo "  make kafka-format        - Format Kafka storage (Required for first run)"
+	@echo "  make kafka-start-bg      - Start Kafka broker in background"
+	@echo "  make kafka-stop          - Stop Kafka broker"
+	@echo "  make kafka-topics        - Create Kafka topics (Administrative only)"
+	@echo "  make kafka-topics-list   - List all available Kafka topics"
+	@echo "  make kafka-producer-stream - Run streaming producer (Live simulation)"
+	@echo "  make kafka-producer-batch - Run batch producer (100 events)"
+	@echo "  make kafka-consumer      - Run batch consumer (ML Processing)"
+	@echo "  make kafka-consumer-stream - Run real-time stream consumer (Continuous)"
 	@echo ""
 	@echo "Quick Start Example:"
 	@echo "  make install setup-dirs"
@@ -337,6 +354,61 @@ airflow-reset: ## Reset Airflow database and fix login issues
 	@echo "Start with: make airflow-standalone"
 
 	@echo "Airflow cleaned successfully!"
+
+# ==========================
+# KAFKA
+# ==========================
+kafka-validate: ## Validate Kafka installation and surroundings
+	@export KAFKA_HOME="$(KAFKA_HOME)" && \
+	$(PYTHON) pipelines/kafka_producer.py --validate
+
+kafka-format: ## Format Kafka storage
+	@mkdir -p runtime/kafka-logs runtime/pids
+	@export KAFKA_HOME="$(KAFKA_HOME)" && \
+	CLUSTER_ID=$$($$KAFKA_HOME/bin/kafka-storage.sh random-uuid) && \
+	echo "Cluster ID: $$CLUSTER_ID" && \
+	$$KAFKA_HOME/bin/kafka-storage.sh format -t $$CLUSTER_ID -c "$(KAFKA_CONF)"
+	@echo "✅ Kafka storage formatted."
+
+kafka-start-bg: ## Start Kafka broker in background
+	@mkdir -p $(PID_DIR)
+	@export KAFKA_HOME="$(KAFKA_HOME)" && \
+	nohup $$KAFKA_HOME/bin/kafka-server-start.sh "$(KAFKA_CONF)" > runtime/kafka.log 2>&1 & \
+	echo $$! > $(PID_DIR)/kafka.pid
+	@echo "✅ Kafka started in background (PID: $$(cat $(PID_DIR)/kafka.pid))"
+
+kafka-stop: ## Stop Kafka broker
+	@if [ -f "$(PID_DIR)/kafka.pid" ]; then \
+		PID=$$(cat $(PID_DIR)/kafka.pid); \
+		kill $$PID || true; \
+		rm -f $(PID_DIR)/kafka.pid; \
+		echo "✅ Kafka stopped"; \
+	else \
+		echo "⚠️ Kafka PID not found"; \
+	fi
+
+kafka-topics: ## Setup ML pipeline topics (Administrative only)
+	@uv run python pipelines/kafka_producer.py --only-setup --topic fraud_detection
+
+kafka-topics-list: ## List all available Kafka topics
+	@uv run python pipelines/kafka_producer.py --list-topics
+
+kafka-check: ## Check if Kafka broker is reachable
+	@export KAFKA_HOME="$(KAFKA_HOME)" && \
+	$(PYTHON) pipelines/kafka_producer.py --validate --quiet && \
+	echo "✅ Kafka broker is running." || echo "❌ Kafka broker not reachable."
+
+kafka-producer-stream: ## Run streaming producer (Live simulation)
+	@uv run python pipelines/kafka_producer.py --mode streaming --topic fraud_detection --rate 2 --duration 600
+
+kafka-producer-batch: ## Run batch producer
+	@uv run python pipelines/kafka_producer.py --mode batch --topic fraud_detection --num-events 100
+
+kafka-consumer: ## Run batch consumer
+	@uv run python pipelines/kafka_batch_consumer.py
+
+kafka-consumer-stream: ## Run real-time stream consumer
+	@uv run python pipelines/kafka_batch_consumer.py --continuous
 
 re-run-all: ## 🔄 Complete reset: kill processes, clean everything, restart fresh
 	@echo "🔄 Starting complete system reset and restart..."
