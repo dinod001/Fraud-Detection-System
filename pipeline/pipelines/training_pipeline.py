@@ -121,7 +121,7 @@ class ModelPipeline:
             logger.info("\n" + "-"*60)
             logger.info("💾 [Step 4/4] Saving final model artifacts to disk...")
             
-            model_save_path = os.path.join(self.data_paths.get('model_artifacts_dir'), 'xgb_final_model.joblib')
+            model_save_path = os.path.join(self.data_paths.get('model_artifacts_dir'), 'fraud_detection.joblib')
             trainer.save_model(best_xgb, model_save_path)
 
             logger.info("\n" + "="*60)

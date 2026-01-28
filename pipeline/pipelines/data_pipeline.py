@@ -54,7 +54,7 @@ class DataPipeline:
 
         self.mlflow_tracker.start_run(run_name="data_pipeline",tags=run_tags)
 
-    def run(self):
+    def run(self) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         """
         Executes the full data pipeline suite.
         """
@@ -141,6 +141,8 @@ class DataPipeline:
                     'test_size': self.training.get('test_size'),
                 }
             )
+
+            return X_train, y_train, X_test, y_test
 
         except Exception as e:
             logger.error(f"💥 Pipeline crashed during execution: {e}")

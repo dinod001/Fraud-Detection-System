@@ -63,7 +63,7 @@ models:
       max_depth: [4, 6, 8]
       n_estimators: [100, 200]
     optimal_threshold: 0.38
-    model_path: "artifacts/models/xgb_final_model.joblib"
+    model_path: "artifacts/models/fraud_detection.joblib"
   
   random_forest:
     param_grid:
@@ -72,7 +72,7 @@ models:
       n_estimators: [100, 200]
       class_weight: ['balanced_subsample']
     optimal_threshold: 0.09
-    model_path: "artifacts/models/xgb_final_model.joblib"
+    model_path: "artifacts/models/fraud_detection.joblib"
 
 mlflow:
   tracking_uri: "file:./mlruns"  # Local file-based tracking
